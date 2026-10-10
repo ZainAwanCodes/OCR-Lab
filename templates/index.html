@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OCR Vision Lab</title>
+  <meta name="description" content="Compare traditional Tesseract OCR with AI-powered text recognition through computer vision preprocessing and rigorous accuracy metrics.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <!-- Laboratory Navigation Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="branding">
+        <div class="logo-mark">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </div>
+        <div class="title-group">
+          <div class="title-row">
+            <h1>OCR Vision Lab</h1>
+            <span class="badge badge-accent">Week 5 Assignment</span>
+          </div>
+          <p class="subtitle">Image Text Recognition System &bull; Compare traditional OCR with AI-powered vision</p>
+        </div>
+      </div>
+
+      <div class="system-status-tray">
+        <div class="status-indicator" id="statusServer" title="Flask Backend Connection Status">
+          <span class="status-dot dot-pending"></span>
+          <span class="status-label">Server: Checking...</span>
+        </div>
+        <div class="status-indicator" id="statusTesseract" title="Local Tesseract OCR Engine">
+          <span class="status-dot dot-pending"></span>
+          <span class="status-label">Tesseract: Checking...</span>
+        </div>
+        <div class="status-indicator" id="statusAI" title="Vision AI API Integration">
+          <span class="status-dot dot-pending"></span>
+          <span class="status-label">AI Mode: Checking...</span>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btnGlobalReset" title="Reset workspace and clear cached data">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+            <path d="M3 3v5h5"/>
+          </svg>
+          Reset Lab
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Laboratory Workspace -->
+  <main class="lab-workspace">
+
+    <!-- Flash Notification Banner -->
+    <div id="notificationBanner" class="notification-banner hidden" role="alert">
+      <span class="notification-icon" id="notifIcon"></span>
+      <span class="notification-text" id="notifMessage"></span>
+      <button class="notification-close" id="notifClose" aria-label="Close notification">&times;</button>
+    </div>
+
+    <!-- Section A: Image Upload & Preset Samples -->
+    <section class="lab-card" id="sectionUpload">
+      <div class="card-header">
+        <div class="card-header-left">
+          <div class="step-badge">1</div>
+          <div>
+            <h2>Image Upload Panel</h2>
+            <p class="card-subtext">Upload a document image (PNG, JPG, WEBP &bull; Max 10MB) or select a university test sample</p>
+          </div>
+        </div>
+        <div class="card-header-right">
+          <span class="file-spec-tag">Max 10 MB &bull; Safe Decoding</span>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <!-- Sample Presets Quick Loader -->
+        <div class="sample-presets-bar">
+          <span class="preset-label">Test Samples:</span>
+          <div class="preset-buttons" id="samplePresetsContainer">
+            <button type="button" class="btn btn-sample" data-sample="1_Clean_Invoice.png">1. Clean Invoice</button>
+            <button type="button" class="btn btn-sample" data-sample="2_ID_Card.png">2. ID Card</button>
+            <button type="button" class="btn btn-sample" data-sample="3_Medical_Receipt.png">3. Medical Receipt</button>
+            <button type="button" class="btn btn-sample" data-sample="4_Noisy_Document.png">4. Noisy / Degradation</button>
+          </div>
+        </div>
+
+        <!-- Drag & Drop Zone -->
+        <div class="drop-zone" id="dropZone" tabindex="0" role="button" aria-label="Upload document image drop area">
+          <input type="file" id="fileInput" accept=".png,.jpg,.jpeg,.webp" class="file-input-hidden" aria-label="Choose image file">
+          <div class="drop-zone-content" id="dropZonePrompt">
+            <div class="upload-icon-circle">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+            </div>
+            <p class="drop-title">Drag & drop your document image here</p>
+            <p class="drop-sub">or <button type="button" class="link-btn" id="browseLink">browse files</button> from your computer</p>
+            <p class="drop-formats">Supported: PNG, JPG, JPEG, WEBP</p>
+          </div>
+
+          <!-- Active Upload Summary -->
+          <div class="upload-active-info hidden" id="uploadActiveInfo">
+            <div class="file-meta-pill">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              <span id="activeFileName" class="active-filename">document.png</span>
+              <span id="activeFileDimensions" class="meta-tag">0 x 0 px</span>
+              <span id="activeFileSize" class="meta-tag">0 KB</span>
+              <span id="activeFileFormat" class="meta-tag">PNG</span>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" id="btnRemoveImage">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+              Remove Image
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section B: Image Processing & Visual Inspection Panel -->
+    <section class="lab-card" id="sectionProcessing">
+      <div class="card-header">
+        <div class="card-header-left">
+          <div class="step-badge">2</div>
+          <div>
+            <h2>Image Processing & Inspection Panel</h2>
+            <p class="card-subtext">Apply modular OpenCV transformations to enhance character edges and suppress background noise</p>
+          </div>
+        </div>
+        <div class="card-header-right">
+          <span class="engine-badge">OpenCV Pipeline</span>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <!-- Preprocessing Control Form -->
+        <div class="processing-controls-grid">
+          <div class="control-card">
+            <div class="control-header">
+              <label class="toggle-switch">
+                <input type="checkbox" id="chkGrayscale" checked>
+                <span class="toggle-slider"></span>
+              </label>
+              <div class="control-info">
+                <span class="control-title">1. Grayscale Conversion</span>
+                <span class="control-desc">Discards chrominance channels; reduces data size by 66%</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="control-card">
+            <div class="control-header">
+              <label class="toggle-switch">
+                <input type="checkbox" id="chkContrast">
+                <span class="toggle-slider"></span>
+              </label>
+              <div class="control-info">
+                <span class="control-title">2. Contrast Enhancement (CLAHE)</span>
+                <span class="control-desc">Adaptive histogram equalization to bring out faint ink</span>
+              </div>
+            </div>
+            <div class="control-params" id="paramsContrast">
+              <label for="rangeClahe">Clip Limit: <span id="valClahe">2.0</span></label>
+              <input type="range" id="rangeClahe" min="1.0" max="4.0" step="0.5" value="2.0">
+            </div>
+          </div>
+
+          <div class="control-card">
+            <div class="control-header">
+              <label class="toggle-switch">
+                <input type="checkbox" id="chkBlur">
+                <span class="toggle-slider"></span>
+              </label>
+              <div class="control-info">
+                <span class="control-title">3. Gaussian Denoising</span>
+                <span class="control-desc">Suppresses high-frequency camera and scanner grain</span>
+              </div>
+            </div>
+            <div class="control-params" id="paramsBlur">
+              <label for="selectBlurKernel">Kernel Window:</label>
+              <select id="selectBlurKernel">
+                <option value="3" selected>3 &times; 3 (Light)</option>
+                <option value="5">5 &times; 5 (Medium)</option>
+                <option value="7">7 &times; 7 (Aggressive)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="control-card">
+            <div class="control-header">
+              <label class="toggle-switch">
+                <input type="checkbox" id="chkAdaptiveThresh">
+                <span class="toggle-slider"></span>
+              </label>
+              <div class="control-info">
+                <span class="control-title">4. Adaptive Thresholding</span>
+                <span class="control-desc">Local binarization; ideal for shadows and gradients</span>
+              </div>
+            </div>
+            <div class="control-params" id="paramsAdaptive">
+              <label for="selectAdaptiveMethod">Method:</label>
+              <select id="selectAdaptiveMethod">
+                <option value="gaussian" selected>Gaussian Weighted</option>
+                <option value="mean">Local Mean</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="control-card">
+            <div class="control-header">
+              <label class="toggle-switch">
+                <input type="checkbox" id="chkOtsuThresh">
+                <span class="toggle-slider"></span>
+              </label>
+              <div class="control-info">
+                <span class="control-title">5. Otsu Thresholding</span>
+                <span class="control-desc">Optimal global binarization minimizing intra-class variance</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="control-card">
+            <div class="control-header">
+              <label class="toggle-switch">
+                <input type="checkbox" id="chkResize">
+                <span class="toggle-slider"></span>
+              </label>
+              <div class="control-info">
+                <span class="control-title">6. Bicubic Upscaling</span>
+                <span class="control-desc">Enlarges small fonts to improve OCR character detection</span>
+              </div>
+            </div>
+            <div class="control-params" id="paramsResize">
+              <label for="selectResizeScale">Scale Factor:</label>
+              <select id="selectResizeScale">
+                <option value="1.5">1.5&times; Scale</option>
+                <option value="2.0" selected>2.0&times; Scale</option>
+                <option value="2.5">2.5&times; Scale</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Educational Pipeline Explanation Box -->
+        <div class="technique-explainer-box" id="techniqueExplainer">
+          <div class="explainer-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          </div>
+          <div class="explainer-content">
+            <h4 id="explainerTitle">Educational Guidance: Image Preprocessing</h4>
+            <p id="explainerBody">
+              Raw photos often have shadows, camera noise, or uneven contrast that degrade OCR accuracy. 
+              Applying grayscale conversion and adaptive thresholding creates crisp bi-level text, giving Tesseract clean character boundaries.
+            </p>
+          </div>
+        </div>
+
+        <!-- Processing Action Bar -->
+        <div class="action-bar-center">
+          <button type="button" class="btn btn-primary" id="btnProcessImage" disabled>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            Process Image with OpenCV
+          </button>
+          <span class="processing-note">Raw image is strictly preserved; output generated separately.</span>
+        </div>
+
+        <!-- Side-by-Side Dual Viewport -->
+        <div class="dual-viewport-grid">
+          <!-- RAW Image Viewport -->
+          <div class="viewport-card">
+            <div class="viewport-header">
+              <div class="viewport-tag raw-tag">RAW IMAGE &bull; Original Upload</div>
+              <span id="rawDimensionsLabel" class="viewport-dimensions">No image uploaded</span>
+            </div>
+            <div class="viewport-canvas" id="rawViewport">
+              <div class="viewport-placeholder" id="rawPlaceholder">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                <p>Awaiting Image Upload</p>
+              </div>
+              <img id="rawImagePreview" class="viewport-img hidden" alt="RAW Image preview">
+            </div>
+          </div>
+
+          <!-- PROCESSED Image Viewport -->
+          <div class="viewport-card">
+            <div class="viewport-header">
+              <div class="viewport-tag processed-tag">PROCESSED IMAGE &bull; Enhanced for OCR</div>
+              <span id="processedDimensionsLabel" class="viewport-dimensions">Awaiting processing</span>
+            </div>
+            <div class="viewport-canvas" id="processedViewport">
+              <div class="viewport-placeholder" id="processedPlaceholder">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                <p>Click "Process Image" to generate</p>
+              </div>
+              <img id="processedImagePreview" class="viewport-img hidden" alt="Processed Image preview">
+            </div>
+          </div>
+        </div>
+
+        <!-- Applied Steps Timeline Pills -->
+        <div class="applied-steps-tray hidden" id="appliedStepsTray">
+          <span class="applied-title">Applied Filters:</span>
+          <div class="applied-pills" id="appliedStepsList"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section C: OCR Execution Panel (Tesseract & Vision AI) -->
+    <section class="lab-card" id="sectionExecution">
+      <div class="card-header">
+        <div class="card-header-left">
+          <div class="step-badge">3</div>
+          <div>
+            <h2>OCR Execution Panel</h2>
+            <p class="card-subtext">Trigger recognition via traditional local engine (Tesseract) or cloud vision AI (Gemini / OpenAI)</p>
+          </div>
+        </div>
+        <div class="card-header-right">
+          <span class="engine-badge">Dual Recognition Modes</span>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div class="execution-modes-grid">
+          
+          <!-- Mode 1: Tesseract OCR Card -->
+          <div class="mode-card mode-tesseract">
+            <div class="mode-card-header">
+              <div class="mode-icon-circle tesseract-color">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 8h10"/><path d="M12 8v8"/></svg>
+              </div>
+              <div>
+                <h3>Mode 1: Tesseract OCR</h3>
+                <p class="mode-sub">Traditional local machine learning engine</p>
+              </div>
+            </div>
+
+            <div class="mode-card-body">
+              <div class="form-group">
+                <label for="selectTessInputSource">Target Image Input:</label>
+                <select id="selectTessInputSource" class="select-styled">
+                  <option value="processed" selected>PROCESSED Image (Recommended)</option>
+                  <option value="raw">RAW Image (Original)</option>
+                </select>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group form-half">
+                  <label for="selectTessPsm">Page Segmentation (PSM):</label>
+                  <select id="selectTessPsm" class="select-styled">
+                    <option value="3" selected>3: Fully Automatic</option>
+                    <option value="6">6: Uniform Block</option>
+                    <option value="4">4: Single Column</option>
+                    <option value="11">11: Sparse Text</option>
+                    <option value="7">7: Single Line</option>
+                  </select>
+                </div>
+                <div class="form-group form-half">
+                  <label for="selectTessLang">Language:</label>
+                  <select id="selectTessLang" class="select-styled">
+                    <option value="eng" selected>English (eng)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="mode-meta-info" id="tesseractEngineDetails">
+                <span>Engine: Checking...</span>
+              </div>
+            </div>
+
+            <div class="mode-card-footer">
+              <button type="button" class="btn btn-primary btn-block" id="btnRunTesseract" disabled>
+                <span class="btn-spinner hidden" id="spinnerTesseract"></span>
+                <span class="btn-text">Extract Text (Tesseract)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Mode 2: AI OCR Card -->
+          <div class="mode-card mode-ai">
+            <div class="mode-card-header">
+              <div class="mode-icon-circle ai-color">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3z"/></svg>
+              </div>
+              <div>
+                <h3>Mode 2: AI Vision OCR</h3>
+                <p class="mode-sub">Multimodal Deep Neural Vision Model</p>
+              </div>
+            </div>
+
+            <div class="mode-card-body">
+              <div class="form-group">
+                <label for="selectAiInputSource">Target Image Input:</label>
+                <select id="selectAiInputSource" class="select-styled">
+                  <option value="raw" selected>RAW Image (Recommended for AI)</option>
+                  <option value="processed">PROCESSED Image</option>
+                </select>
+              </div>
+
+              <div class="ai-prompt-notice">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <span>Instruction: Faithful transcription preserving reading order and line breaks without hallucinating words.</span>
+              </div>
+
+              <div class="ai-config-status-box" id="aiConfigStatusBox">
+                <span id="aiConfigStatusText">Checking credentials...</span>
+              </div>
+            </div>
+
+            <div class="mode-card-footer">
+              <button type="button" class="btn btn-accent btn-block" id="btnRunAI" disabled>
+                <span class="btn-spinner hidden" id="spinnerAI"></span>
+                <span class="btn-text">Extract with AI Vision</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section D: Results Inspection & Accuracy Evaluation Panel -->
+    <section class="lab-card" id="sectionResults">
+      <div class="card-header">
+        <div class="card-header-left">
+          <div class="step-badge">4</div>
+          <div>
+            <h2>Results & Comparison Panel</h2>
+            <p class="card-subtext">Inspect transcriptions side-by-side, benchmark timing, and evaluate WER / CER error rates</p>
+          </div>
+        </div>
+        <div class="card-header-right">
+          <span class="engine-badge">Evaluation Dashboard</span>
+        </div>
+      </div>
+
+      <div class="card-body">
+        
+        <!-- Dual Output Transcription Cards -->
+        <div class="results-grid">
+          
+          <!-- Tesseract Output Card -->
+          <div class="result-card">
+            <div class="result-card-header">
+              <div class="result-title-group">
+                <span class="result-badge badge-tess">Tesseract Output</span>
+                <span class="execution-timer" id="tessTimeBadge">Time: -- ms</span>
+              </div>
+              <div class="result-actions">
+                <button type="button" class="btn-action-icon" id="btnCopyTess" title="Copy to clipboard" aria-label="Copy Tesseract text">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                </button>
+                <button type="button" class="btn-action-icon" id="btnDownloadTess" title="Download .txt file" aria-label="Download Tesseract text as file">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                </button>
+                <button type="button" class="btn-action-icon" id="btnClearTess" title="Clear text" aria-label="Clear Tesseract text">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="result-card-body">
+              <textarea id="outputTesseract" class="result-textarea" placeholder="Tesseract extracted text will appear here..." readonly></textarea>
+            </div>
+
+            <div class="result-card-footer">
+              <span class="stat-pill" id="tessCharCount">0 characters</span>
+              <span class="stat-pill" id="tessWordCount">0 words</span>
+            </div>
+          </div>
+
+          <!-- AI Vision Output Card -->
+          <div class="result-card">
+            <div class="result-card-header">
+              <div class="result-title-group">
+                <span class="result-badge badge-ai">AI Vision Output</span>
+                <span class="execution-timer" id="aiTimeBadge">Time: -- ms</span>
+              </div>
+              <div class="result-actions">
+                <button type="button" class="btn-action-icon" id="btnCopyAI" title="Copy to clipboard" aria-label="Copy AI text">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                </button>
+                <button type="button" class="btn-action-icon" id="btnDownloadAI" title="Download .txt file" aria-label="Download AI text as file">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                </button>
+                <button type="button" class="btn-action-icon" id="btnClearAI" title="Clear text" aria-label="Clear AI text">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="result-card-body">
+              <textarea id="outputAI" class="result-textarea" placeholder="AI Vision extracted text will appear here..." readonly></textarea>
+            </div>
+
+            <div class="result-card-footer">
+              <span class="stat-pill" id="aiCharCount">0 characters</span>
+              <span class="stat-pill" id="aiWordCount">0 words</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ground-Truth Reference Input Box -->
+        <div class="ground-truth-box">
+          <div class="gt-header">
+            <div class="gt-title-row">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <h4>Optional Ground-Truth Reference Transcription</h4>
+            </div>
+            <span class="gt-sub">Required for objective Word Error Rate (WER) & Character Error Rate (CER) calculation</span>
+          </div>
+          <div class="gt-body">
+            <textarea id="inputGroundTruth" class="gt-textarea" placeholder="Paste the verified ground-truth text here to benchmark mathematical accuracy..."></textarea>
+          </div>
+          <div class="gt-footer">
+            <label class="gt-checkbox">
+              <input type="checkbox" id="chkIgnoreCase" checked>
+              <span>Case-insensitive comparison</span>
+            </label>
+            <button type="button" class="btn btn-secondary" id="btnCalculateMetrics">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+              Compute Accuracy Metrics
+            </button>
+          </div>
+        </div>
+
+        <!-- Comparative Metrics Dashboard -->
+        <div class="comparison-dashboard">
+          <div class="dashboard-header">
+            <h3>OCR Performance Benchmark Dashboard</h3>
+          </div>
+
+          <!-- Summary Metric Cards -->
+          <div class="metrics-summary-grid">
+            <div class="metric-card">
+              <span class="metric-label">Execution Time</span>
+              <div class="metric-split">
+                <div><span class="sub-label">Tesseract:</span> <strong id="metricTessTime">--</strong></div>
+                <div><span class="sub-label">AI Vision:</span> <strong id="metricAiTime">--</strong></div>
+              </div>
+            </div>
+
+            <div class="metric-card">
+              <span class="metric-label">Character Output</span>
+              <div class="metric-split">
+                <div><span class="sub-label">Tesseract:</span> <strong id="metricTessChars">0 chars</strong></div>
+                <div><span class="sub-label">AI Vision:</span> <strong id="metricAiChars">0 chars</strong></div>
+              </div>
+            </div>
+
+            <div class="metric-card">
+              <span class="metric-label">Word Output</span>
+              <div class="metric-split">
+                <div><span class="sub-label">Tesseract:</span> <strong id="metricTessWords">0 words</strong></div>
+                <div><span class="sub-label">AI Vision:</span> <strong id="metricAiWords">0 words</strong></div>
+              </div>
+            </div>
+
+            <div class="metric-card">
+              <span class="metric-label">Direct Match Status</span>
+              <div class="metric-value" id="metricExactMatch">Awaiting OCR runs</div>
+            </div>
+          </div>
+
+          <!-- Rigorous Accuracy Evaluation Section (Ground-Truth Dependent) -->
+          <div class="evaluation-container" id="evalContainer">
+            <div class="eval-placeholder" id="evalPlaceholder">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+              <span>A reliable accuracy comparison requires a ground-truth transcription. Character and word counts indicate volume, not accuracy.</span>
+            </div>
+
+            <div class="eval-table-wrapper hidden" id="evalTableWrapper">
+              <table class="eval-table">
+                <thead>
+                  <tr>
+                    <th>OCR Engine</th>
+                    <th>Word Error Rate (WER)</th>
+                    <th>Character Error Rate (CER)</th>
+                    <th>Substitutions (S)</th>
+                    <th>Deletions (D)</th>
+                    <th>Insertions (I)</th>
+                    <th>Exact Match vs Truth</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr id="rowEvalTess">
+                    <td><strong>Tesseract OCR</strong></td>
+                    <td class="wer-cell" id="evalTessWer">--</td>
+                    <td class="cer-cell" id="evalTessCer">--</td>
+                    <td id="evalTessSubs">--</td>
+                    <td id="evalTessDels">--</td>
+                    <td id="evalTessInss">--</td>
+                    <td id="evalTessMatch">--</td>
+                  </tr>
+                  <tr id="rowEvalAI">
+                    <td><strong>AI Vision Model</strong></td>
+                    <td class="wer-cell" id="evalAiWer">--</td>
+                    <td class="cer-cell" id="evalAiCer">--</td>
+                    <td id="evalAiSubs">--</td>
+                    <td id="evalAiDels">--</td>
+                    <td id="evalAiInss">--</td>
+                    <td id="evalAiMatch">--</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div class="academic-note">
+                <strong>Academic Notice on Error Rates:</strong>
+                <code>WER = (S + D + I) / Reference Words</code> &bull; <code>CER = (S + D + I) / Reference Characters</code>.
+                Lower percentages represent higher fidelity. Error rates can exceed 100% when spurious insertion characters outnumber reference length.
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="app-footer">
+    <div class="footer-container">
+      <p>OCR Vision Lab &bull; Week 5 Computer Vision & AI Practical Assignment &bull; Built with Flask, OpenCV & Vanilla JS</p>
+    </div>
+  </footer>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

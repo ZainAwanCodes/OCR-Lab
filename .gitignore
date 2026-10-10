@@ -1,0 +1,26 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Environment secrets
+.env
+*.local
+
+# Ephemeral uploads & processed outputs
+uploads/*
+!uploads/.gitkeep
+processed/*
+!processed/.gitkeep
+
+# IDE and OS
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
+.DS_Store
